@@ -1,14 +1,11 @@
 #include <iostream>
-
-extern uint32_t g_normalFuncCnt;
+extern uint32_t g_normalFuncCnt ;
+extern uint32_t g_normalParamFuncCnt;
 
 // 普通函数
 int print_hello();
 
 // 带参数的函数
-void print_hello(std::string str, int num);
-
-// 普通函数
 void print_message_param(std::string arg1, int arg2);
 
 // 仿函数

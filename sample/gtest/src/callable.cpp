@@ -1,4 +1,7 @@
 #include "callable.h"
+
+uint32_t g_normalFuncCnt = 0;
+uint32_t g_normalParamFuncCnt = 0;
 // 普通函数
 int print_hello()
 {
@@ -7,19 +10,11 @@ int print_hello()
     return g_normalFuncCnt;
 }
 
-// 带参数的函数
-void print_hello(std::string str, int num)
-{
-    g_normalFuncCnt++;
-    std::cout << "Normal Func Cnt: " << g_normalFuncCnt << " str: " << str << " num: " << num
-              << std::endl;
-}
-
 // 普通函数
 void print_message_param(std::string arg1, int arg2)
 {
-    g_normalFuncCnt++;
-    std::cout << "Normal Func Cnt: " << g_normalFuncCnt << " arg1: " << arg1 << std::endl;
+    g_normalParamFuncCnt++;
+    std::cout << "Normal Func Cnt: " << g_normalParamFuncCnt << " arg1: " << arg1 << std::endl;
 }
 
 
