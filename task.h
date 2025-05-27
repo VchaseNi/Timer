@@ -30,6 +30,7 @@ public:
      * @tparam F: 可调用对象模板参数
      * @tparam Args: 可调用对象参数模板参数
      * @tparam typename: 检查函数返回值
+     * @param isFut: 是否获取返回值
      * @param f: 可调用对象
      * @param args: 可调用对象参数
      */
@@ -52,7 +53,6 @@ public:
      */
     std::future<Ret> getFuture()
     {
-        // m_hasRead = true; // 标记已经获取了future
         return m_promise.get_future();
     }
 
@@ -67,20 +67,12 @@ public:
             if (m_isFut) {
                 m_promise.set_value(); // 如果是void类型，直接set_value
             }
-            /* if (!m_hasSet && m_hasRead) {
-                m_promise.set_value();
-                m_hasSet = true; // 只允许set_value一次
-            } */
         }
         else {
             Ret ret = m_cb();
             if (m_isFut) {
                 m_promise.set_value(ret); // 如果有返回值，set_value
             }
-            /* if (!m_hasSet && m_hasRead) {
-                m_promise.set_value(ret);
-                m_hasSet = true; // 只允许set_value一次
-            } */
         }
     }
 
@@ -88,8 +80,6 @@ private:
     std::function<Ret()> m_cb;   // 保存可调用对象
     bool m_isFut;                // 是否获取返回值
     std::promise<Ret> m_promise; // 用于异步任务的承诺
-    // bool m_hasSet = false;       // 是否已经set_value
-    // bool m_hasRead = false;      // 是否已经getFuture
 };
 
 /**
@@ -98,6 +88,7 @@ private:
  * @tparam F：可调用对象模板参数
  * @tparam Args：可调用对象参数模板参数
  * @tparam Ret：可调用对象返回值
+ * @param isFut：是否获取返回值
  * @param f：可调用对象
  * @param args：可调用对象参数
  * @return std::unique_ptr<Task<Ret>>
