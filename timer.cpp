@@ -36,6 +36,7 @@ void Timer::execute()
             auto [isEx, isFin] = isExecuteAndFinished(info, std::chrono::duration_cast<std::chrono::milliseconds>(
                                                                 std::chrono::system_clock::now().time_since_epoch())
                                                                 .count());
+            std::cout << "isEx: " << isEx << " isFin: " << isFin << std::endl;
             if (isEx) {
                 info.task->execute();
             }
@@ -126,18 +127,20 @@ std::tuple<bool, bool> Timer::isExecuteAndFinished(TaskInfo &info, int64_t curSt
     bool isEx = false;
     bool isFin = false;
     /* std::cout << "info.startTime: " << info.startTime << " info.lastExecuteTime: " << info.lastExecuteTime
-              << " info.interval: " << info.interval << " span: " << info.span << " curStamp: " << curStamp << std::endl; */
+              << " info.interval: " << info.interval << " span: " << info.span << " curStamp: " << curStamp << std::endl;
+     */
     // 第一次执行
     if (info.lastExecuteTime == 0 && curStamp - info.startTime >= info.interval) {
         info.lastExecuteTime = curStamp;
         info.startTime = curStamp - info.interval; // 矫正因其他Timer导致的误差
         isEx = true;
-        if (info.mode == TimerMode::span && curStamp - info.startTime >= info.span) {
+        if (TimerMode::single == info.mode || TimerMode::singleFuture == info.mode ||
+            (TimerMode::span == info.mode && curStamp - info.startTime >= info.span)) {
             isFin = true;
         }
     }
     else if (info.lastExecuteTime != 0) {
-        if (info.mode == TimerMode::span && curStamp - info.startTime >= info.span) {
+        if (TimerMode::span == info.mode && curStamp - info.startTime >= info.span) {
             isFin = true;
         }
 

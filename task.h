@@ -4,16 +4,16 @@
  * @brief 任务，用于定时器的任务对象，支持普通函数、成员函数、静态成员函数、lambda表达式等可调用对象
  * @version 0.1
  * @date 2025-05-24
- * 
+ *
  * @copyright Copyright (c) 2025
- * 
+ *
  */
 #ifndef __VC_TASK__
 #define __VC_TASK__
 #include <future>
+#include <iostream>
 #include <memory>
 #include <type_traits>
-#include <iostream>
 namespace vcTimer {
 class TaskBase {
 public:
@@ -35,10 +35,11 @@ public:
      */
     template <typename F, typename... Args,
               typename = std::enable_if_t<std::is_same_v<Ret, std::invoke_result_t<F, Args...>>, void>>
-    Task(F &&f, Args &&...args)
+    Task(bool isFut, F &&f, Args &&...args)
         : m_cb([f = std::forward<F>(f), args = std::make_tuple(std::forward<Args>(args)...)]() {
               return std::apply(f, args);
-          })
+          }),
+          m_isFut(isFut)
     {
     }
 
@@ -51,7 +52,7 @@ public:
      */
     std::future<Ret> getFuture()
     {
-        m_hasRead = true; // 标记已经获取了future
+        // m_hasRead = true; // 标记已经获取了future
         return m_promise.get_future();
     }
 
@@ -63,25 +64,32 @@ public:
     {
         if constexpr (std::is_same_v<Ret, void>) {
             m_cb();
-            if (!m_hasSet && m_hasRead) {
+            if (m_isFut) {
+                m_promise.set_value(); // 如果是void类型，直接set_value
+            }
+            /* if (!m_hasSet && m_hasRead) {
                 m_promise.set_value();
                 m_hasSet = true; // 只允许set_value一次
-            }
+            } */
         }
         else {
             Ret ret = m_cb();
-            if (!m_hasSet && m_hasRead) {
+            if (m_isFut) {
+                m_promise.set_value(ret); // 如果有返回值，set_value
+            }
+            /* if (!m_hasSet && m_hasRead) {
                 m_promise.set_value(ret);
                 m_hasSet = true; // 只允许set_value一次
-            }
+            } */
         }
     }
 
 private:
     std::function<Ret()> m_cb;   // 保存可调用对象
+    bool m_isFut;                // 是否获取返回值
     std::promise<Ret> m_promise; // 用于异步任务的承诺
-    bool m_hasSet = false;       // 是否已经set_value
-    bool m_hasRead = false;      // 是否已经getFuture
+    // bool m_hasSet = false;       // 是否已经set_value
+    // bool m_hasRead = false;      // 是否已经getFuture
 };
 
 /**
@@ -95,9 +103,10 @@ private:
  * @return std::unique_ptr<Task<Ret>>
  */
 template <typename F, typename... Args, typename Ret = std::invoke_result_t<F, Args...>>
-std::unique_ptr<Task<Ret>> makeTask(F &&f, Args &&...args)
+std::tuple<std::unique_ptr<Task<Ret>>, std::future<Ret>> makeTask(bool isFut, F &&f, Args &&...args)
 {
-    return std::make_unique<Task<Ret>>(std::forward<F>(f), std::forward<Args>(args)...);
+    auto task = std::make_unique<Task<Ret>>(isFut, std::forward<F>(f), std::forward<Args>(args)...);
+    return {std::move(task), isFut ? task->getFuture() : std::future<Ret>{}};
 }
 }; // namespace vcTimer
 #endif

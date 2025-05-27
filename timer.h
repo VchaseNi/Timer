@@ -26,8 +26,10 @@
 namespace vcTimer {
 // 定时器模式
 enum class TimerMode {
-    period = 0x1, // 周期永久
-    span = 0x2,   // 周期限制
+    period = 0x1, // 周期
+    span = 0x2,   // 有效时段
+    single = 0x3, // 单次
+    singleFuture = 0x4, // 单次Future,可获取返回值
 };
 
 // 任务状态
@@ -71,6 +73,7 @@ public:
      * @tparam Args: 可调用对象参数模板参数
      * @tparam Ret: 可调用对象返回值
      * @param mode: 定时器模式
+     * @param isFut: 是否获取返回值
      * @param interval: 间隔
      * @param span: 有效时间
      * @param f: 可调用对象
@@ -78,15 +81,11 @@ public:
      * @return std::tuple<TaskId, std::optional<std::future<Ret>>>
      */
     template <typename F, typename... Args, typename Ret = std::invoke_result_t<F, Args...>>
-    std::tuple<TaskId, std::optional<std::future<Ret>>> addTask(TimerMode mode, int64_t interval, int64_t span, F &&f,
+    std::tuple<TaskId, std::future<Ret>> addTask(TimerMode mode, int64_t interval, int64_t span, F &&f,
                                                                 Args &&...args)
     {
-        std::optional<std::future<Ret>> fut;
-        auto task = makeTask(std::forward<F>(f), std::forward<Args>(args)...);
+        auto [task, fut] = makeTask((mode == TimerMode::singleFuture), std::forward<F>(f), std::forward<Args>(args)...);
         auto id = getTaskId();
-        if (interval == span) {
-            fut = task->getFuture();
-        }
 
         std::lock_guard<std::mutex> lock(m_mutex);
         m_taskMap.emplace(id, TaskInfo{mode, interval, span, 0, 0, 0, TaskStatus::notStarted, std::move(task)});

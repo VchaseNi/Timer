@@ -1,6 +1,6 @@
 /**
  * @file span.cpp
- * @author your name (you@domain.com)
+ * @author vc (VchaseNi@gmail.com)
  * @brief 适用于以一定周期频率定时触发，并持续span时间的场景；eg：因某事件发生，以100ms的频率采集信号，持续500ms；
  *        备注：addTask的参数(mode = vcTimer::TimerMode::span, span是interval的整数倍)
  * @version 0.1
