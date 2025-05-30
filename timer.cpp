@@ -36,7 +36,7 @@ void Timer::execute()
             auto [isEx, isFin] = isExecuteAndFinished(info, std::chrono::duration_cast<std::chrono::milliseconds>(
                                                                 std::chrono::system_clock::now().time_since_epoch())
                                                                 .count());
-            std::cout << "isEx: " << isEx << " isFin: " << isFin << std::endl;
+            // std::cout << "isEx: " << isEx << " isFin: " << isFin << std::endl;
             if (isEx) {
                 info.task->execute();
             }

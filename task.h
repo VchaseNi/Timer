@@ -10,10 +10,12 @@
  */
 #ifndef __VC_TASK__
 #define __VC_TASK__
+#include <functional>
 #include <future>
 #include <iostream>
 #include <memory>
 #include <type_traits>
+
 namespace vcTimer {
 class TaskBase {
 public:
@@ -24,25 +26,46 @@ public:
 template <typename Ret = void>
 class Task : public TaskBase {
 public:
-    /**
-     * @brief Construct a new Task object
-     *
-     * @tparam F: 可调用对象模板参数
-     * @tparam Args: 可调用对象参数模板参数
-     * @tparam typename: 检查函数返回值
-     * @param isFut: 是否获取返回值
-     * @param f: 可调用对象
-     * @param args: 可调用对象参数
-     */
+/**
+ * @brief Construct a new Task object
+ *
+ * @tparam F: 可调用对象模板参数
+ * @tparam Args: 可调用对象参数模板参数
+ * @tparam typename: 检查函数返回值
+ * @param isFut: 是否获取返回值
+ * @param f: 可调用对象
+ * @param args: 可调用对象参数
+ */
+#if __cplusplus >= 202002L
     template <typename F, typename... Args,
               typename = std::enable_if_t<std::is_same_v<Ret, std::invoke_result_t<F, Args...>>, void>>
     Task(bool isFut, F &&f, Args &&...args)
-        : m_cb([f = std::forward<F>(f), args = std::make_tuple(std::forward<Args>(args)...)]() {
-              return std::apply(f, args);
+        : m_cb([f = std::forward<F>(f), ... args = std::forward<Args>(args)]() { return std::invoke(f, args...); }),
+          m_isFut(isFut)
+    {
+    }
+#elif __cplusplus >= 201703L
+    template <typename F, typename... Args,
+              typename = std::enable_if_t<std::is_same_v<Ret, std::invoke_result_t<F, Args...>>, void>>
+    Task(bool isFut, F &&f, Args &&...args)
+        : m_cb([f = std::forward<F>(f), args = std::tuple<Args...>(std::forward<Args>(args)...)]() mutable {
+              return std::apply(
+                  [&f](auto &&...args) -> Ret { return std::invoke(f, std::forward<decltype(args)>(args)...); },
+                  std::move(args));
           }),
           m_isFut(isFut)
     {
     }
+#endif
+    /* template <typename F, typename... Args,
+              typename = std::enable_if_t<std::is_same_v<Ret, std::invoke_result_t<F, Args...>>, void>>
+    Task(bool isFut, F &&f, Args &&...args)
+        : m_cb([f = std::forward<F>(f), args = std::forward_as_tuple(std::forward<Args>(args)...)]() {
+              return std::apply(f, args);
+          }),
+          m_isFut(isFut)
+    {
+    } */
 
     ~Task() override {}
 
@@ -51,10 +74,7 @@ public:
      *
      * @return std::future<Ret>
      */
-    std::future<Ret> getFuture()
-    {
-        return m_promise.get_future();
-    }
+    std::future<Ret> getFuture() { return m_promise.get_future(); }
 
     /**
      * @brief 执行定时任务

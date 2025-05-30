@@ -1,5 +1,6 @@
 #include <iostream>
 #include <gtest/gtest.h>
+#include <thread>
 #include "callable.h"
 #include "task.h"
 
@@ -22,7 +23,8 @@ TEST(task, normalFunc)
 TEST(task, normalFuncParam)
 {
     g_normalParamFuncCnt = 0;
-    auto [task, _] = makeTask(false, print_message_param, std::string("hello"), 1);
+    std::cout << "__cplusplus = " << __cplusplus << std::endl;
+    auto [task, _] = makeTask(false, print_message_param, "hello", 1);
     task->execute();
     std::this_thread::sleep_for(std::chrono::milliseconds(100));
     ASSERT_EQ(g_normalParamFuncCnt, 1);

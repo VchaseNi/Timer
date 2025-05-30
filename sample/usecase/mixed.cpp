@@ -44,10 +44,10 @@ int main()
     auto pe = tm.addTask(vcTimer::TimerMode::period, 200, 0, periodFunc, std::vector<std::string>{"x", "y"});
     tm.control(std::get<0>(pe), vcTimer::TaskControl::start);
 
-    auto [id, fut] = tm.addTask(vcTimer::TimerMode::span, 50, 50, onceFunc, 1);
+    auto [id, fut] = tm.addTask(vcTimer::TimerMode::singleFuture, 50, 50, onceFunc, 1);
     tm.control(id, vcTimer::TaskControl::start);
-    assert(fut.has_value());
-    assert(fut.value().get());
+    assert(fut.valid());
+    assert(fut.get());
     // 在任务队列为空时退出，Timer析构函数会自动停止所有任务
     while (!tm.isTaskEmpty()) {
         std::this_thread::sleep_for(std::chrono::milliseconds(1000));

@@ -25,15 +25,15 @@ bool recieveResp(int requestId)
 int main()
 {
     vcTimer::Timer tm;
-    auto [id, fut] = tm.addTask(vcTimer::TimerMode::span, 50, 50, recieveResp, 1);
+    auto [id, fut] = tm.addTask(vcTimer::TimerMode::singleFuture, 50, 50, recieveResp, 1);
     tm.control(id, vcTimer::TaskControl::start);
 
-    assert(fut.has_value());
-    assert(fut.value().get());
+    assert(fut.valid());
+    assert(fut.get());
 
-    auto t = tm.addTask(vcTimer::TimerMode::span, 100, 100, recieveResp, 0);
+    auto t = tm.addTask(vcTimer::TimerMode::singleFuture, 100, 100, recieveResp, 0);
     tm.control(std::get<0>(t), vcTimer::TaskControl::start);
-    assert(!std::get<1>(t).value().get());
+    assert(!std::get<1>(t).get());
 
     // 在任务队列为空时退出，Timer析构函数会自动停止所有任务
     while (!tm.isTaskEmpty()) {
