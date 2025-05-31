@@ -8,7 +8,7 @@ TEST(timer, normalFunc)
 {
     g_normalFuncCnt = 0;
     Timer tm;
-    auto [id, fut] = tm.addTask(TimerMode::singleFuture, 1000, 1000, print_hello);
+    auto [id, fut] = tm.addTask<TaskMode::singleFuture>(1000, 1000, print_hello);
     tm.control(id, TaskControl::start);
     ASSERT_TRUE(fut.valid());
     ASSERT_EQ(1, fut.get());
@@ -18,7 +18,7 @@ TEST(timer, normalFunc)
     }
 
     Timer tm1;
-    auto [id1, fut1] = tm1.addTask(TimerMode::span, 500, 1000, print_hello);
+    auto [id1, fut1] = tm1.addTask<TaskMode::span>(500, 1000, print_hello);
     tm1.control(id1, TaskControl::start);
     ASSERT_FALSE(fut1.valid());
     while (!tm1.isTaskEmpty()) {
@@ -31,7 +31,7 @@ TEST(timer, normalParamFunc)
 {
     Timer tm;
     g_normalParamFuncCnt = 0;
-    auto [id, _] = tm.addTask(TimerMode::span, 500, 2 * TimerSecond, print_message_param, "hello", 1);
+    auto [id, _] = tm.addTask<TaskMode::span>(500, 2 * TimerSecond, print_message_param, "hello", 1);
     tm.control(id, TaskControl::start);
 
     while (!tm.isTaskEmpty()) {
@@ -40,7 +40,7 @@ TEST(timer, normalParamFunc)
     ASSERT_EQ(g_normalParamFuncCnt, 4);
 
     Timer tm1;
-    auto [id1, fut] = tm1.addTask(TimerMode::single, 500, 500, print_message_param, "hello", 1);
+    auto [id1, fut] = tm1.addTask<TaskMode::single>(500, 500, print_message_param, "hello", 1);
     tm1.control(id1, TaskControl::start);
 
     ASSERT_FALSE(fut.valid());
@@ -54,13 +54,13 @@ TEST(timer, memberFunc)
 {
     Timer tm;
     MyClass obj;
-    auto [id, fut] = tm.addTask(TimerMode::singleFuture, 500, 500, &MyClass::member_func, &obj, "Hello");
+    auto [id, fut] = tm.addTask<TaskMode::singleFuture>(500, 500, &MyClass::member_func, &obj, "Hello");
     tm.control(id, TaskControl::start);
 
     fut.get();  // 等待任务完成
     ASSERT_EQ(obj.memberFuncCnt, 1);
 
-    auto t = tm.addTask(TimerMode::span, 1000, 5 * TimerSecond, &MyClass::member_func, &obj, "Hello");
+    auto t = tm.addTask<TaskMode::span>(1000, 5 * TimerSecond, &MyClass::member_func, &obj, "Hello");
     tm.control(std::get<0>(t), TaskControl::start);
 
     while (!tm.isTaskEmpty()) {
@@ -73,10 +73,10 @@ TEST(timer, staticFunc)
 {
     Timer tm;
     MyClass::staticFuncCnt = 0;
-    auto [id, _] = tm.addTask(TimerMode::span, 500, 2 * TimerSecond, &MyClass::static_func);
+    auto [id, _] = tm.addTask<TaskMode::span>(500, 2 * TimerSecond, &MyClass::static_func);
     tm.control(id, TaskControl::start);
 
-    auto [id1, future] = tm.addTask(TimerMode::span, 800, 2 * TimerSecond, &MyClass::static_func);
+    auto [id1, future] = tm.addTask<TaskMode::span>(800, 2 * TimerSecond, &MyClass::static_func);
     tm.control(id1, TaskControl::start);
 
     while (!tm.isTaskEmpty()) {
@@ -89,19 +89,19 @@ TEST(timer, lambda)
 {
     uint32_t lambdaCnt = 0;
     Timer tm;
-    auto [id, fut] = tm.addTask(TimerMode::span, 500, 2 * TimerSecond, [&]() {
+    auto [id, fut] = tm.addTask<TaskMode::span>(500, 2 * TimerSecond, [&]() {
         std::cout << "Lambda called!" << std::endl;
         lambdaCnt++;
     });
     tm.control(id, TaskControl::start);
 
-    auto t = tm.addTask(TimerMode::span, 1500, 3 * TimerSecond, [&]() {
+    auto t = tm.addTask<TaskMode::span>(1500, 3 * TimerSecond, [&]() {
         std::cout << "Lambda called!" << std::endl;
         lambdaCnt++;
     });
     tm.control(std::get<0>(t), TaskControl::start);
 
-    auto tp = tm.addTask(TimerMode::period, 500, 0, [&]() {
+    auto tp = tm.addTask<TaskMode::period>(500, 0, [&]() {
         std::cout << "Lambda period called!" << std::endl;
     });
     tm.control(std::get<0>(tp), TaskControl::start);
@@ -121,14 +121,14 @@ TEST(timer, functor)
 {
     Functor functor;
     Timer tm;
-    auto [id, _] = tm.addTask(TimerMode::span, 50, 200, std::ref(functor));
+    auto [id, _] = tm.addTask<TaskMode::span>(50, 200, std::ref(functor));
     tm.control(id, TaskControl::start);
 
-    auto t = tm.addTask(TimerMode::singleFuture, 100, 100, std::ref(functor));
+    auto t = tm.addTask<TaskMode::singleFuture>(100, 100, std::ref(functor));
     tm.control(std::get<0>(t), TaskControl::start);
     std::get<1>(t).get();
 
-    auto tp = tm.addTask(TimerMode::period, 200, 0, std::ref(functor));
+    auto tp = tm.addTask<TaskMode::period>(200, 0, std::ref(functor));
     tm.control(std::get<0>(tp), TaskControl::start);
 
     uint32_t cnt = 0;
@@ -146,20 +146,20 @@ TEST(timer, mixed)
 {
     Timer tm;
     MyClass obj;
-    auto [id, fut] = tm.addTask(TimerMode::singleFuture, 500, 500, &MyClass::member_func, &obj, "Hello1");
+    auto [id, fut] = tm.addTask<TaskMode::singleFuture>(500, 500, &MyClass::member_func, &obj, "Hello1");
     tm.control(id, TaskControl::start);
 
     fut.get();  // 等待任务完成
     ASSERT_EQ(obj.memberFuncCnt, 1);
 
-    auto t1 = tm.addTask(TimerMode::span, 1000, 5 * TimerSecond, &MyClass::member_func, &obj, "Hello2");
+    auto t1 = tm.addTask<TaskMode::span>(1000, 5 * TimerSecond, &MyClass::member_func, &obj, "Hello2");
     tm.control(std::get<0>(t1), TaskControl::start);
 
-    auto t2 = tm.addTask(TimerMode::period, 100, 0, &MyClass::member_func, &obj, "Hello3");
+    auto t2 = tm.addTask<TaskMode::period>(100, 0, &MyClass::member_func, &obj, "Hello3");
     tm.control(std::get<0>(t2), TaskControl::start);
 
     Functor functor;
-    auto t3 = tm.addTask(TimerMode::period, 200, 0, std::ref(functor));
+    auto t3 = tm.addTask<TaskMode::period>(200, 0, std::ref(functor));
     tm.control(std::get<0>(t3), TaskControl::start);
 
     uint32_t cnt = 0;

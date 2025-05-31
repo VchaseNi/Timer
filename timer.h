@@ -24,13 +24,7 @@
 #include <tuple>
 
 namespace vcTimer {
-// 定时器模式
-enum class TimerMode {
-    period = 0x1, // 周期
-    span = 0x2,   // 有效时段
-    single = 0x3, // 单次
-    singleFuture = 0x4, // 单次Future,可获取返回值
-};
+
 
 // 任务状态
 enum class TaskStatus {
@@ -47,7 +41,7 @@ enum class TaskControl {
 };
 
 struct TaskInfo {
-    TimerMode mode;                 // 任务模式
+    TaskMode mode;                 // 任务模式
     int64_t interval;               // 间隔时间
     int64_t span;                   // 周期时间
     int64_t lastExecuteTime;        // 上次执行时间
@@ -80,11 +74,11 @@ public:
      * @param args: 可调用对象参数
      * @return std::tuple<TaskId, std::optional<std::future<Ret>>>
      */
-    template <typename F, typename... Args, typename Ret = std::invoke_result_t<F, Args...>>
-    std::tuple<TaskId, std::future<Ret>> addTask(TimerMode mode, int64_t interval, int64_t span, F &&f,
+    template <TaskMode mode, typename F, typename... Args, typename Ret = std::invoke_result_t<F, Args...>>
+    std::tuple<TaskId, std::future<Ret>> addTask(int64_t interval, int64_t span, F &&f,
                                                                 Args &&...args)
     {
-        auto [task, fut] = makeTask((mode == TimerMode::singleFuture), std::forward<F>(f), std::forward<Args>(args)...);
+        auto [task, fut] = makeTask<mode>(std::forward<F>(f), std::forward<Args>(args)...);
         auto id = getTaskId();
 
         std::lock_guard<std::mutex> lock(m_mutex);

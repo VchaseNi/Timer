@@ -2,7 +2,7 @@
  * @file once.cpp
  * @author vc (VchaseNi@gmail.com)
  * @brief 适用于请求响应的定时器，在发送请求后，等待响应超时的场景, 仅执行一次，并且支持等待可调用对象返回值；
- *        备注：addTask的参数(mode = vcTimer::TimerMode::span, interval == span)
+ *        备注：addTask的参数(mode = vcTimer::TaskMode::span, interval == span)
  * @version 0.1
  * @date 2025-05-24
  *
@@ -25,13 +25,13 @@ bool recieveResp(int requestId)
 int main()
 {
     vcTimer::Timer tm;
-    auto [id, fut] = tm.addTask(vcTimer::TimerMode::singleFuture, 50, 50, recieveResp, 1);
+    auto [id, fut] = tm.addTask<vcTimer::TaskMode::singleFuture>(50, 50, recieveResp, 1);
     tm.control(id, vcTimer::TaskControl::start);
 
     assert(fut.valid());
     assert(fut.get());
 
-    auto t = tm.addTask(vcTimer::TimerMode::singleFuture, 100, 100, recieveResp, 0);
+    auto t = tm.addTask<vcTimer::TaskMode::singleFuture>(100, 100, recieveResp, 0);
     tm.control(std::get<0>(t), vcTimer::TaskControl::start);
     assert(!std::get<1>(t).get());
 

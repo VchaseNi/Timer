@@ -134,13 +134,13 @@ std::tuple<bool, bool> Timer::isExecuteAndFinished(TaskInfo &info, int64_t curSt
         info.lastExecuteTime = curStamp;
         info.startTime = curStamp - info.interval; // 矫正因其他Timer导致的误差
         isEx = true;
-        if (TimerMode::single == info.mode || TimerMode::singleFuture == info.mode ||
-            (TimerMode::span == info.mode && curStamp - info.startTime >= info.span)) {
+        if (TaskMode::single == info.mode || TaskMode::singleFuture == info.mode ||
+            (TaskMode::span == info.mode && curStamp - info.startTime >= info.span)) {
             isFin = true;
         }
     }
     else if (info.lastExecuteTime != 0) {
-        if (TimerMode::span == info.mode && curStamp - info.startTime >= info.span) {
+        if (TaskMode::span == info.mode && curStamp - info.startTime >= info.span) {
             isFin = true;
         }
 

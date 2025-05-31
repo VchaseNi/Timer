@@ -30,7 +30,7 @@
 ## 开发环境
 
 - 操作系统：Linux
-- C++：17
+- C++：17 (最优20)
 
 ## 代码结构
 
@@ -43,7 +43,6 @@
     ├── gtest/    // 单元测试用例
     └── usecase/  // 使用示例
 ```
-
 ## 快速开始
 
 1. 包含头文件：
@@ -54,3 +53,10 @@
 2. 参考 sample/usecase 目录中的示例代码实现定时任务
 
 3. 运行 sample/gtest 中的单元测试验证功能
+
+4. 编译命令：
+```bash
+cmake -B build -DCMAKE_CXX_STANDARD=17 && cmake --build build
+cmake -B build -DCMAKE_CXX_STANDARD=20 && cmake --build build
+
+```

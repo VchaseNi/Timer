@@ -36,15 +36,15 @@ void periodFunc(std::vector<std::string> signals) {
 int main()
 {
     vcTimer::Timer tm;
-    auto sp = tm.addTask(vcTimer::TimerMode::span, 100, 50 * vcTimer::TimerSecond, spanFunc, "xy");
+    auto sp = tm.addTask<vcTimer::TaskMode::span>(100, 50 * vcTimer::TimerSecond, spanFunc, "xy");
     tm.control(std::get<0>(sp), vcTimer::TaskControl::start);
 
 
 
-    auto pe = tm.addTask(vcTimer::TimerMode::period, 200, 0, periodFunc, std::vector<std::string>{"x", "y"});
+    auto pe = tm.addTask<vcTimer::TaskMode::period>(200, 0, periodFunc, std::vector<std::string>{"x", "y"});
     tm.control(std::get<0>(pe), vcTimer::TaskControl::start);
 
-    auto [id, fut] = tm.addTask(vcTimer::TimerMode::singleFuture, 50, 50, onceFunc, 1);
+    auto [id, fut] = tm.addTask<vcTimer::TaskMode::singleFuture>(50, 50, onceFunc, 1);
     tm.control(id, vcTimer::TaskControl::start);
     assert(fut.valid());
     assert(fut.get());

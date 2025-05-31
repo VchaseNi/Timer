@@ -2,7 +2,7 @@
  * @file period.cpp
  * @author vc (VchaseNi@gmail.com)
  * @brief 适用于周期性定时器，周期性执行任务；eg：每隔1s采集一次信号；
- *        备注：addTask的参数(mode = vcTimer::TimerMode::period, span = 0)
+ *        备注：addTask的参数(mode = vcTimer::TaskMode::period, span = 0)
  * @version 0.1
  * @date 2025-05-24
  * 
@@ -24,7 +24,7 @@ int main()
 {
     vcTimer::Timer tm;
     std::vector<std::string> signals = {"x", "y"};
-    auto [id, _] = tm.addTask(vcTimer::TimerMode::period, 1000, 0, collect, signals);
+    auto [id, _] = tm.addTask<vcTimer::TaskMode::period>(1000, 0, collect, signals);
     tm.control(id, vcTimer::TaskControl::start);
 
     // 在任务队列为空时退出，Timer析构函数会自动停止所有任务
