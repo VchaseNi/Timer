@@ -54,9 +54,7 @@ public:
     template <typename F, typename... Args,
               typename = std::enable_if_t<std::is_same_v<Ret, std::invoke_result_t<F, Args...>>, void>>
     Task(F &&f, Args &&...args)
-        : m_cb([f = std::forward<F>(f), args = std::make_tuple(std::forward<Args>(args)...)]() mutable {
-              return std::apply(f, args); // 需要周期执行，所以不能move(args)
-          })
+        : m_cb(std::bind(std::forward<F>(f), std::forward<Args>(args)...))
     {
     }
 #endif
@@ -104,9 +102,7 @@ public:
     template <typename F, typename... Args,
               typename = std::enable_if_t<std::is_same_v<Ret, std::invoke_result_t<F, Args...>>, void>>
     Task(F &&f, Args &&...args)
-        : m_cb([f = std::forward<F>(f), args = std::make_tuple(std::forward<Args>(args)...)]() mutable {
-              return std::apply(f, std::move(args));
-          })
+        : m_cb(std::bind(std::forward<F>(f), std::forward<Args>(args)...))
     {
     }
 #endif

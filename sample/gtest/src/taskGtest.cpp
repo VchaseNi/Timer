@@ -32,10 +32,13 @@ TEST(task, normalFuncParam)
 TEST(task, memberFunc)
 {
     MyClass obj;
-    auto [task, _] = makeTask<TaskMode::singleFuture>(&MyClass::member_func, &obj, "Hello");
+    auto [task, fut] = makeTask<TaskMode::singleFuture>(&MyClass::member_func, &obj, "Hello");
     task->execute();
+
+    auto [task1, _] = makeTask<TaskMode::single>(&MyClass::member_func, &obj, "World");
+    task1->execute();
     std::this_thread::sleep_for(std::chrono::milliseconds(100));
-    ASSERT_EQ(obj.memberFuncCnt, 1);
+    ASSERT_EQ(obj.memberFuncCnt, 2);
 }
 
 TEST(task, staticFunc)
