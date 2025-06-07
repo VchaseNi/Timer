@@ -12,10 +12,10 @@ include_directories(
 
 # src
 file(GLOB_RECURSE src ${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp)
-file(GLOB timer ${CMAKE_CURRENT_SOURCE_DIR}/../../timer.cpp)
+# file(GLOB timer ${CMAKE_CURRENT_SOURCE_DIR}/../../timer.cpp)
 set(SUB_DIR_LIB_SRCS
     ${CMAKE_CURRENT_SOURCE_DIR}/gtest.cpp
-    ${timer}
+    # ${timer}
     ${src}
 )
 add_executable(${PROJECT_NAME} ${SUB_DIR_LIB_SRCS})

@@ -38,7 +38,6 @@
 项目根目录/
 ├── task.h        // 任务
 ├── timer.h       // 定时器
-├── timer.cpp     // 定时器实现
 └── sample/       // 示例代码
     ├── gtest/    // 单元测试用例
     └── usecase/  // 使用示例

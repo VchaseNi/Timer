@@ -15,16 +15,16 @@
  * @copyright Copyright (c) 2025
  *
  */
-#ifndef __VC_TASK_MGR__
-#define __VC_TASK_MGR__
+#ifndef __VC_TIMER__
+#define __VC_TIMER__
 #include "task.h"
 #include <map>
 #include <mutex>
 #include <thread>
 #include <tuple>
+#include <numeric>
 
 namespace vcTimer {
-
 
 // 任务状态
 enum class TaskStatus {
@@ -41,7 +41,7 @@ enum class TaskControl {
 };
 
 struct TaskInfo {
-    TaskMode mode;                 // 任务模式
+    TaskMode mode;                  // 任务模式
     int64_t interval;               // 间隔时间
     int64_t span;                   // 周期时间
     int64_t lastExecuteTime;        // 上次执行时间
@@ -58,8 +58,24 @@ const int64_t TimerGcd = 1000;
 
 class Timer {
 public:
-    Timer();
-    ~Timer();
+    Timer() : m_active(true)
+    {
+        m_thread = std::thread([this]() {
+            while (m_active.load(std::memory_order_acquire)) {
+                execute();
+                std::this_thread::sleep_for(std::chrono::milliseconds(m_gcd));
+            }
+        });
+    }
+
+    ~Timer()
+    {
+        if (m_active.exchange(false, std::memory_order_acq_rel)) {
+            if (m_thread.joinable()) {
+                m_thread.join();
+            }
+        }
+    };
     /**
      * @brief 添加定时任务
      *
@@ -75,8 +91,7 @@ public:
      * @return std::tuple<TaskId, std::optional<std::future<Ret>>>
      */
     template <TaskMode mode, typename F, typename... Args, typename Ret = std::invoke_result_t<F, Args...>>
-    std::tuple<TaskId, std::future<Ret>> addTask(int64_t interval, int64_t span, F &&f,
-                                                                Args &&...args)
+    std::tuple<TaskId, std::future<Ret>> addTask(int64_t interval, int64_t span, F &&f, Args &&...args)
     {
         auto [task, fut] = makeTask<mode>(std::forward<F>(f), std::forward<Args>(args)...);
         auto id = getTaskId();
@@ -92,7 +107,30 @@ public:
      * @param id task id
      * @param control TaskControl
      */
-    void control(TaskId id, TaskControl control);
+    void control(TaskId id, TaskControl control)
+    {
+        std::lock_guard<std::mutex> lock(m_mutex);
+        auto it = m_taskMap.find(id);
+        if (it != m_taskMap.end()) {
+            switch (control) {
+            case TaskControl::start: {
+                it->second.status = TaskStatus::running;
+                it->second.startTime = std::chrono::duration_cast<std::chrono::milliseconds>(
+                                           std::chrono::system_clock::now().time_since_epoch())
+                                           .count();
+            } break;
+            case TaskControl::stop:
+                m_taskMap.erase(it);
+                break;
+            default:
+                break;
+            }
+            m_gcd = gcd(); // 因task列表变更，重新计算最大公约数
+        }
+        else {
+            std::cerr << "Task not found!" << std::endl;
+        }
+    }
 
     /**
      * @brief 任务是否为空
@@ -111,21 +149,66 @@ private:
      * @brief 执行所有定时任务
      *
      */
-    void execute();
+    void execute()
+    {
+        bool isFinished = false;
+        std::lock_guard<std::mutex> lock(m_mutex);
+        for (auto it = m_taskMap.begin(); it != m_taskMap.end();) {
+            auto &[id, info] = *it;
+            if (info.status == TaskStatus::running) {
+                auto [isEx, isFin] = isExecuteAndFinished(info, std::chrono::duration_cast<std::chrono::milliseconds>(
+                                                                    std::chrono::system_clock::now().time_since_epoch())
+                                                                    .count());
+                // std::cout << "isEx: " << isEx << " isFin: " << isFin << std::endl;
+                if (isEx) {
+                    info.task->execute();
+                }
+                if (isFin) {
+                    it = m_taskMap.erase(it);
+                    isFinished = true;
+                }
+                else {
+                    it++;
+                }
+            }
+            else {
+                ++it;
+            }
+        }
+        if (isFinished) {
+            m_gcd = gcd(); // 因task列表变更，重新计算最大公约数
+        }
+    }
 
     /**
      * @brief Get the Task Id object
      *
      * @return TaskId
      */
-    TaskId getTaskId();
+    TaskId getTaskId() { return ++m_taskId; };
 
     /**
      * @brief 计算最小公倍数
      *
      * @return int64_t
      */
-    int64_t gcd();
+    int64_t gcd()
+    {
+        bool isFirst = false;
+        int64_t value = 0;
+        for (const auto &[id, info] : m_taskMap) {
+            if (info.status == TaskStatus::running) {
+                if (!isFirst) {
+                    isFirst = true;
+                    value = info.interval;
+                }
+                else {
+                    value = std::gcd(value, info.interval);
+                }
+            }
+        }
+        return (value == 0 || value > TimerGcd) ? TimerGcd : value;
+    };
 
     /**
      * @brief 判断task是要执行以及是否任务完成
@@ -134,7 +217,37 @@ private:
      * @param curStamp: 当前时间戳
      * @return std::tuple<bool, bool> first: 是否执行, second: 是否完成
      */
-    std::tuple<bool, bool> isExecuteAndFinished(TaskInfo &info, int64_t curStamp);
+    std::tuple<bool, bool> isExecuteAndFinished(TaskInfo &info, int64_t curStamp)
+    {
+        bool isEx = false;
+        bool isFin = false;
+        /* std::cout << "info.startTime: " << info.startTime << " info.lastExecuteTime: " << info.lastExecuteTime
+                  << " info.interval: " << info.interval << " span: " << info.span << " curStamp: " << curStamp <<
+           std::endl;
+         */
+        // 第一次执行
+        if (info.lastExecuteTime == 0 && curStamp - info.startTime >= info.interval) {
+            info.lastExecuteTime = curStamp;
+            info.startTime = curStamp - info.interval; // 矫正因其他Timer导致的误差
+            isEx = true;
+            if (TaskMode::single == info.mode || TaskMode::singleFuture == info.mode ||
+                (TaskMode::span == info.mode && curStamp - info.startTime >= info.span)) {
+                isFin = true;
+            }
+        }
+        else if (info.lastExecuteTime != 0) {
+            if (TaskMode::span == info.mode && curStamp - info.startTime >= info.span) {
+                isFin = true;
+            }
+
+            if (curStamp - info.lastExecuteTime >= info.interval) {
+                info.lastExecuteTime = curStamp;
+                isEx = true;
+            }
+        }
+
+        return {isEx, isFin};
+    };
 
 private:
     std::atomic<bool> m_active{false};    // 任务管理器是否处于活动状态
